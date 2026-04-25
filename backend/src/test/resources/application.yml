@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: backend
+
+  # DataSource (H2 in-memory, 테스트 전용)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # JPA / Hibernate
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  # H2 Console (테스트에서는 비활성화)
+  h2:
+    console:
+      enabled: false
