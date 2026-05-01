@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pro: #3b82f6;
+  --color-pro-light: #dbeafe;
+  --color-con: #ef4444;
+  --color-con-light: #fee2e2;
+  --color-neutral: #6b7280;
+  --color-neutral-light: #f3f4f6;
+}
+
+body {
+  margin: 0;
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
