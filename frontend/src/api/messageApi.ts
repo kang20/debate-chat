@@ -1,11 +1,12 @@
 import { apiClient } from './client';
 import type { Message, SendMessageRequest, EditMessageRequest, CursorPageResponse } from '@/types/message';
+import type { ChatChannel } from '@/types/room';
 
 export const messageApi = {
-  list: (roomId: string, cursor?: string) =>
+  list: (roomId: string, cursor?: string, channel?: ChatChannel) =>
     apiClient
       .get<CursorPageResponse<Message>>(`/rooms/${roomId}/messages`, {
-        params: cursor ? { cursor } : undefined,
+        params: { ...(cursor ? { cursor } : {}), ...(channel ? { channel } : {}) },
       })
       .then((r) => r.data),
 

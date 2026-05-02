@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '@/api/authApi';
-import type { User, SignupRequest, LoginRequest, UpdateProfileRequest } from '@/types/user';
+import type { User, OAuthSignupRequest, OAuthLoginRequest, UpdateProfileRequest } from '@/types/user';
 
 interface AuthState {
   user: User | null;
@@ -8,8 +8,8 @@ interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
 
-  login: (data: LoginRequest) => Promise<void>;
-  signup: (data: SignupRequest) => Promise<void>;
+  login: (data: OAuthLoginRequest) => Promise<void>;
+  signup: (data: OAuthSignupRequest) => Promise<void>;
   logout: () => void;
   fetchMe: () => Promise<void>;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;

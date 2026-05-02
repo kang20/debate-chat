@@ -7,7 +7,6 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
 import { RoomDetailPage } from '@/pages/room/RoomDetailPage';
 import { ProfilePage } from '@/pages/profile/ProfilePage';
-import { NotificationsPage } from '@/pages/notifications/NotificationsPage';
 
 export const router = createBrowserRouter([
   {
@@ -21,14 +20,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ProfilePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'notifications',
-        element: (
-          <ProtectedRoute>
-            <NotificationsPage />
           </ProtectedRoute>
         ),
       },

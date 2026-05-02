@@ -6,23 +6,30 @@ import { chatSimulator } from '@/mocks/chatSimulator';
 import { ChatMessage } from './ChatMessage';
 import { Spinner } from '@/components/ui/Spinner';
 import type { Message } from '@/types/message';
+import type { ChatChannel } from '@/types/room';
 
 interface ChatPanelProps {
   roomId: string;
-  isParticipant: boolean;
+  channel: ChatChannel;
+  canSend: boolean;
+  readOnlyMessage?: string;
 }
 
-export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
-  const { messages, isLoading, hasMore, fetchMessages, fetchOlderMessages, sendMessage, addIncomingMessage, clearMessages } = useChatStore();
+export function ChatPanel({ roomId, channel, canSend, readOnlyMessage }: ChatPanelProps) {
+  const store = useChatStore();
   const { user } = useAuthStore();
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
+  const channelState = channel === 'DEBATE' ? store.debate : store.neutral;
+  const { messages, hasMore } = channelState;
+  const { isLoading, fetchMessages, fetchOlderMessages, sendMessage, addIncomingMessage, clearMessages } = store;
+
   useEffect(() => {
     clearMessages();
-    fetchMessages(roomId);
+    fetchMessages(roomId, channel);
 
     if (import.meta.env.VITE_USE_MOCK === 'true') {
       chatSimulator.start(roomId);
@@ -40,7 +47,7 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
       chatSimulator.stop();
       window.removeEventListener('mock-new-message', handleNewMessage);
     };
-  }, [roomId, fetchMessages, clearMessages, addIncomingMessage]);
+  }, [roomId, channel, fetchMessages, clearMessages, addIncomingMessage]);
 
   useEffect(() => {
     if (autoScroll) {
@@ -53,7 +60,7 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
     if (!container) return;
 
     if (container.scrollTop === 0 && hasMore && !isLoading) {
-      fetchOlderMessages(roomId);
+      fetchOlderMessages(roomId, channel);
     }
 
     const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
@@ -61,11 +68,11 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || !isParticipant) return;
+    if (!input.trim() || !canSend) return;
     const content = input.trim();
     setInput('');
     try {
-      await sendMessage(roomId, content);
+      await sendMessage(roomId, content, channel);
       setAutoScroll(true);
     } catch {
       setInput(content);
@@ -95,7 +102,7 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
         {hasMore && messages.length > 0 && (
           <div className="flex justify-center py-2">
             <button
-              onClick={() => fetchOlderMessages(roomId)}
+              onClick={() => fetchOlderMessages(roomId, channel)}
               className="text-xs text-indigo-600 hover:underline"
             >
               이전 메시지 불러오기
@@ -114,7 +121,7 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
 
       {/* Input */}
       <div className="border-t border-gray-200 p-3">
-        {isParticipant ? (
+        {canSend ? (
           <div className="flex items-end gap-2">
             <textarea
               value={input}
@@ -134,7 +141,7 @@ export function ChatPanel({ roomId, isParticipant }: ChatPanelProps) {
           </div>
         ) : (
           <p className="text-center text-sm text-gray-400">
-            토론에 참여해야 메시지를 보낼 수 있습니다.
+            {readOnlyMessage ?? '메시지를 보낼 수 없습니다.'}
           </p>
         )}
       </div>

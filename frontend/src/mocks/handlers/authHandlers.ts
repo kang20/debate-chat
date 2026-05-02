@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { db } from '../db';
+import type { OAuthProvider } from '@/types/user';
 
 function extractToken(request: Request): string | null {
   const auth = request.headers.get('Authorization');
@@ -8,34 +9,37 @@ function extractToken(request: Request): string | null {
 
 export const authHandlers = [
   http.post('/api/auth/signup', async ({ request }) => {
-    const body = (await request.json()) as { email: string; password: string; nickname: string };
+    const body = (await request.json()) as { provider: OAuthProvider; code: string; nickname: string };
 
-    if (db.getUserByEmail(body.email)) {
-      return HttpResponse.json({ message: '이미 사용 중인 이메일입니다.' }, { status: 409 });
+    // Check nickname uniqueness
+    const existingUser = Array.from(db.users.values()).find((u) => u.nickname === body.nickname);
+    if (existingUser) {
+      return HttpResponse.json({ message: '이미 사용 중인 닉네임입니다.' }, { status: 409 });
     }
 
     const user = {
       id: db.nextId('user'),
-      email: body.email,
+      provider: body.provider,
       nickname: body.nickname,
-      bio: '',
       avatarUrl: '',
+      debateGrade: 'BRONZE',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     db.users.set(user.id, user);
-    db.passwords.set(body.email, body.password);
+    const newCode = `mock-${body.provider.toLowerCase()}-${user.id}`;
+    db.oauthCodes.set(newCode, user.id);
 
     return HttpResponse.json(user, { status: 201 });
   }),
 
   http.post('/api/auth/login', async ({ request }) => {
-    const body = (await request.json()) as { email: string; password: string };
+    const body = (await request.json()) as { provider: OAuthProvider; code: string };
 
-    const user = db.getUserByEmail(body.email);
-    if (!user || db.passwords.get(body.email) !== body.password) {
-      return HttpResponse.json({ message: '이메일 또는 비밀번호가 올바르지 않습니다.' }, { status: 401 });
+    const user = db.getUserByOAuthCode(body.code);
+    if (!user) {
+      return HttpResponse.json({ message: 'OAuth 인증에 실패했습니다.' }, { status: 401 });
     }
 
     const token = `mock-token-${user.id}-${Date.now()}`;

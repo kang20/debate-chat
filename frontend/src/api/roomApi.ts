@@ -3,7 +3,7 @@ import type { CreateRoomRequest, DebateRoom, JoinRoomRequest, RoomParticipant } 
 import type { PageResponse } from '@/types/api';
 
 export const roomApi = {
-  list: (params: { page?: number; size?: number; tag?: string; q?: string; status?: string }) =>
+  list: (params: { page?: number; size?: number; tag?: string; status?: string }) =>
     apiClient.get<PageResponse<DebateRoom>>('/rooms', { params }).then((r) => r.data),
 
   get: (roomId: string) =>
@@ -14,6 +14,9 @@ export const roomApi = {
 
   close: (roomId: string) =>
     apiClient.post(`/rooms/${roomId}/close`),
+
+  advancePhase: (roomId: string) =>
+    apiClient.post<DebateRoom>(`/rooms/${roomId}/advance-phase`).then((r) => r.data),
 
   getParticipants: (roomId: string) =>
     apiClient.get<RoomParticipant[]>(`/rooms/${roomId}/participants`).then((r) => r.data),

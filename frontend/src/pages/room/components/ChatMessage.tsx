@@ -18,6 +18,17 @@ export function ChatMessage({ message, isOwn }: ChatMessageProps) {
     );
   }
 
+  // System message rendering
+  if (message.isSystem) {
+    return (
+      <div className="flex justify-center py-1">
+        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-500">
+          {message.content}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('flex gap-2', isOwn && 'flex-row-reverse')}>
       <Avatar name={message.authorNickname} size="sm" className="shrink-0 mt-1" />

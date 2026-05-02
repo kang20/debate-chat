@@ -8,7 +8,7 @@ interface RoomState {
   participants: RoomParticipant[];
   page: number;
   totalPages: number;
-  filters: { tag?: string; q?: string; status?: string };
+  filters: { tag?: string; status?: string };
   isLoading: boolean;
 
   fetchRooms: () => Promise<void>;
@@ -17,6 +17,7 @@ interface RoomState {
   joinRoom: (roomId: string, side: Side) => Promise<void>;
   leaveRoom: (roomId: string) => Promise<void>;
   closeRoom: (roomId: string) => Promise<void>;
+  advancePhase: (roomId: string) => Promise<void>;
   setFilters: (filters: Partial<RoomState['filters']>) => void;
   setPage: (page: number) => void;
 }
@@ -63,19 +64,30 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
   joinRoom: async (roomId, side) => {
     await roomApi.join(roomId, { side });
-    const participants = await roomApi.getParticipants(roomId);
-    set({ participants });
+    const [room, participants] = await Promise.all([
+      roomApi.get(roomId),
+      roomApi.getParticipants(roomId),
+    ]);
+    set({ currentRoom: room, participants });
   },
 
   leaveRoom: async (roomId) => {
     await roomApi.leave(roomId);
-    const participants = await roomApi.getParticipants(roomId);
-    set({ participants });
+    const [room, participants] = await Promise.all([
+      roomApi.get(roomId),
+      roomApi.getParticipants(roomId),
+    ]);
+    set({ currentRoom: room, participants });
   },
 
   closeRoom: async (roomId) => {
     await roomApi.close(roomId);
     const room = await roomApi.get(roomId);
+    set({ currentRoom: room });
+  },
+
+  advancePhase: async (roomId) => {
+    const room = await roomApi.advancePhase(roomId);
     set({ currentRoom: room });
   },
 

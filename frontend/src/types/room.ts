@@ -1,6 +1,7 @@
 export type Side = 'PRO' | 'CON' | 'NEUTRAL';
-export type Visibility = 'PUBLIC' | 'PRIVATE';
-export type RoomStatus = 'OPEN' | 'CLOSED';
+export type RoomStatus = 'RECRUITING' | 'IN_PROGRESS' | 'CLOSED';
+export type DebatePhase = 'RECRUITING' | 'OPENING' | 'REBUTTAL' | 'CLOSING';
+export type ChatChannel = 'DEBATE' | 'NEUTRAL';
 
 export interface Tag {
   id: string;
@@ -11,11 +12,14 @@ export interface DebateRoom {
   id: string;
   title: string;
   description: string;
-  ownerId: string;
-  ownerNickname: string;
-  visibility: Visibility;
+  moderatorId: string;
+  moderatorNickname: string;
   status: RoomStatus;
+  phase: DebatePhase;
   tags: Tag[];
+  minParticipants: number;
+  maxParticipants: number;
+  startTime: string;
   participantCount: number;
   proCount: number;
   conCount: number;
@@ -37,8 +41,10 @@ export interface RoomParticipant {
 export interface CreateRoomRequest {
   title: string;
   description: string;
-  visibility: Visibility;
   tags: string[];
+  minParticipants: number;
+  maxParticipants: number;
+  startTime: string;
 }
 
 export interface JoinRoomRequest {

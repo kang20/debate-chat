@@ -1,11 +1,11 @@
 import { apiClient } from './client';
-import type { LoginRequest, LoginResponse, SignupRequest, UpdateProfileRequest, User } from '@/types/user';
+import type { OAuthLoginRequest, LoginResponse, OAuthSignupRequest, UpdateProfileRequest, User } from '@/types/user';
 
 export const authApi = {
-  signup: (data: SignupRequest) =>
+  signup: (data: OAuthSignupRequest) =>
     apiClient.post<User>('/auth/signup', data).then((r) => r.data),
 
-  login: (data: LoginRequest) =>
+  login: (data: OAuthLoginRequest) =>
     apiClient.post<LoginResponse>('/auth/login', data).then((r) => r.data),
 
   logout: () =>

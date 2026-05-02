@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { db } from '../db';
+import type { ChatChannel } from '@/types/room';
 
 function extractToken(request: Request): string | null {
   const auth = request.headers.get('Authorization');
@@ -10,9 +11,10 @@ export const messageHandlers = [
   http.get('/api/rooms/:roomId/messages', ({ request, params }) => {
     const url = new URL(request.url);
     const cursor = url.searchParams.get('cursor');
+    const channel = url.searchParams.get('channel') as ChatChannel | null;
     const roomId = params.roomId as string;
 
-    const allMessages = db.getMessagesForRoom(roomId);
+    const allMessages = db.getMessagesForRoom(roomId, channel ?? undefined);
     const pageSize = 20;
 
     let startIdx = 0;
@@ -36,7 +38,7 @@ export const messageHandlers = [
     if (!user) return HttpResponse.json({ message: '인증이 필요합니다.' }, { status: 401 });
 
     const roomId = params.roomId as string;
-    const body = (await request.json()) as { content: string };
+    const body = (await request.json()) as { content: string; channel: ChatChannel };
 
     const participant = db.participants.find((p) => p.roomId === roomId && p.userId === user.id);
     if (!participant) return HttpResponse.json({ message: '토론방에 먼저 참여해주세요.' }, { status: 403 });
@@ -49,6 +51,8 @@ export const messageHandlers = [
       authorAvatarUrl: user.avatarUrl,
       content: body.content,
       sideAtSend: participant.side,
+      channel: body.channel,
+      isSystem: false,
       createdAt: new Date().toISOString(),
       editedAt: null,
       deleted: false,

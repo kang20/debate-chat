@@ -1,5 +1,6 @@
 import { db } from './db';
 import type { Message } from '@/types/message';
+import type { ChatChannel } from '@/types/room';
 
 const botResponses: Record<string, string[]> = {
   'room-1': [
@@ -54,6 +55,9 @@ export class ChatSimulator {
       const responses = botResponses[this.roomId] || defaultResponses;
       const content = responses[Math.floor(Math.random() * responses.length)];
 
+      // Determine channel based on participant's side
+      const channel: ChatChannel = randomBot.side === 'NEUTRAL' ? 'NEUTRAL' : 'DEBATE';
+
       const message: Message = {
         id: db.nextId('msg'),
         roomId: this.roomId,
@@ -62,6 +66,8 @@ export class ChatSimulator {
         authorAvatarUrl: randomBot.avatarUrl,
         content,
         sideAtSend: randomBot.side,
+        channel,
+        isSystem: false,
         createdAt: new Date().toISOString(),
         editedAt: null,
         deleted: false,

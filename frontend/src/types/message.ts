@@ -1,4 +1,4 @@
-import type { Side } from './room';
+import type { Side, ChatChannel } from './room';
 
 export interface Message {
   id: string;
@@ -8,6 +8,8 @@ export interface Message {
   authorAvatarUrl: string;
   content: string;
   sideAtSend: Side;
+  channel: ChatChannel;
+  isSystem: boolean;
   createdAt: string;
   editedAt: string | null;
   deleted: boolean;
@@ -15,6 +17,7 @@ export interface Message {
 
 export interface SendMessageRequest {
   content: string;
+  channel: ChatChannel;
 }
 
 export interface EditMessageRequest {

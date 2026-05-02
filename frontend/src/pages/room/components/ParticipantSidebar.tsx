@@ -1,9 +1,12 @@
 import type { RoomParticipant, Side } from '@/types/room';
 import { Avatar } from '@/components/ui/Avatar';
 import { SideBadge } from '@/components/ui/Badge';
+import { Crown } from 'lucide-react';
 
 interface ParticipantSidebarProps {
   participants: RoomParticipant[];
+  moderatorNickname: string;
+  maxParticipants: number;
 }
 
 const sideOrder: Side[] = ['PRO', 'CON', 'NEUTRAL'];
@@ -13,7 +16,9 @@ const sideLabels: Record<Side, string> = {
   NEUTRAL: '중립',
 };
 
-export function ParticipantSidebar({ participants }: ParticipantSidebarProps) {
+export function ParticipantSidebar({ participants, moderatorNickname, maxParticipants }: ParticipantSidebarProps) {
+  const proConCount = participants.filter((p) => p.side === 'PRO' || p.side === 'CON').length;
+
   const grouped = sideOrder.map((side) => ({
     side,
     label: sideLabels[side],
@@ -22,7 +27,21 @@ export function ParticipantSidebar({ participants }: ParticipantSidebarProps) {
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <h3 className="mb-3 text-sm font-semibold text-gray-900">참여자 ({participants.length})</h3>
+      {/* Moderator */}
+      <div className="mb-4 border-b border-gray-100 pb-3">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-600">
+          <Crown size={14} />
+          진행자
+        </div>
+        <div className="flex items-center gap-2">
+          <Avatar name={moderatorNickname} size="sm" />
+          <span className="text-sm font-medium text-gray-700">{moderatorNickname}</span>
+        </div>
+      </div>
+
+      <h3 className="mb-1 text-sm font-semibold text-gray-900">참여자 ({participants.length})</h3>
+      <p className="mb-3 text-[11px] text-gray-400">찬반 {proConCount}/{maxParticipants}명</p>
+
       <div className="space-y-4">
         {grouped.map(({ side, label, members }) => (
           <div key={side}>

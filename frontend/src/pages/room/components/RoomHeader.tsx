@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, Lock, Users } from 'lucide-react';
+import { ArrowLeft, Users, CalendarClock, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router';
-import type { DebateRoom, Side } from '@/types/room';
+import type { DebateRoom, Side, RoomStatus } from '@/types/room';
 import { Badge, SideBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -16,14 +16,27 @@ interface RoomHeaderProps {
   mySide?: Side;
 }
 
+const statusBadges: Record<RoomStatus, { label: string; cls: string }> = {
+  RECRUITING: { label: '모집 중', cls: 'bg-green-100 text-green-700' },
+  IN_PROGRESS: { label: '진행 중', cls: 'bg-indigo-100 text-indigo-700' },
+  CLOSED: { label: '종료', cls: 'bg-gray-800 text-white' },
+};
+
+function formatStartTime(iso: string) {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+}
+
 export function RoomHeader({ room, isParticipant, mySide }: RoomHeaderProps) {
   const navigate = useNavigate();
   const { joinRoom, leaveRoom, closeRoom } = useRoomStore();
   const { user, isAuthenticated } = useAuthStore();
   const [showJoinModal, setShowJoinModal] = useState(false);
 
-  const isOwner = user?.id === room.ownerId;
+  const isModerator = user?.id === room.moderatorId;
   const isClosed = room.status === 'CLOSED';
+  const canClose = isModerator && !isClosed && room.phase === 'CLOSING';
+  const badge = statusBadges[room.status];
 
   const handleJoin = async (side: Side) => {
     try {
@@ -56,7 +69,7 @@ export function RoomHeader({ room, isParticipant, mySide }: RoomHeaderProps) {
 
   return (
     <>
-      <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+      <div className="mb-4 rounded-xl border border-gray-200 bg-white p-5">
         <div className="mb-3 flex items-start gap-3">
           <button onClick={() => navigate('/')} className="mt-1 text-gray-400 hover:text-gray-600">
             <ArrowLeft size={20} />
@@ -64,10 +77,7 @@ export function RoomHeader({ room, isParticipant, mySide }: RoomHeaderProps) {
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{room.title}</h1>
-              {isClosed && <Badge className="bg-gray-800 text-white">종료</Badge>}
-              {room.visibility === 'PRIVATE' && (
-                <Lock size={14} className="text-gray-400" />
-              )}
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${badge.cls}`}>{badge.label}</span>
             </div>
             <p className="mt-1 text-sm text-gray-500">{room.description}</p>
           </div>
@@ -82,34 +92,42 @@ export function RoomHeader({ room, isParticipant, mySide }: RoomHeaderProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4 text-sm text-gray-500">
             <span className="flex items-center gap-1">
+              <Crown size={14} className="text-amber-500" />
+              <span className="font-medium text-gray-700">{room.moderatorNickname}</span>
+            </span>
+            <span className="flex items-center gap-1">
               <Users size={16} />
-              참여자 {room.participantCount}명
+              {room.participantCount}/{room.maxParticipants}명
             </span>
             <span className="text-blue-600">찬성 {room.proCount}</span>
             <span className="text-red-600">반대 {room.conCount}</span>
             <span>중립 {room.neutralCount}</span>
+            <span className="flex items-center gap-1">
+              <CalendarClock size={14} />
+              {formatStartTime(room.startTime)}
+            </span>
             <span>{relativeTime(room.createdAt)}</span>
           </div>
 
           <div className="flex items-center gap-2">
-            {isAuthenticated && !isClosed && (
+            {isAuthenticated && !isClosed && !isModerator && (
               isParticipant ? (
                 <div className="flex items-center gap-2">
                   {mySide && <SideBadge side={mySide} />}
                   <Button size="sm" variant="ghost" onClick={handleLeave}>
                     나가기
                   </Button>
-                  {isOwner && (
-                    <Button size="sm" variant="danger" onClick={handleClose}>
-                      토론 종료
-                    </Button>
-                  )}
                 </div>
               ) : (
                 <Button size="sm" onClick={() => setShowJoinModal(true)}>
                   참여하기
                 </Button>
               )
+            )}
+            {canClose && (
+              <Button size="sm" variant="danger" onClick={handleClose}>
+                토론 종료
+              </Button>
             )}
           </div>
         </div>
