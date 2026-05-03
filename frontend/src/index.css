@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pro: #3b82f6;
+  --color-pro-light: #dbeafe;
+  --color-con: #ef4444;
+  --color-con-light: #fee2e2;
+  --color-neutral: #6b7280;
+  --color-neutral-light: #f3f4f6;
+  --font-sans: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+  @apply bg-gray-50 text-gray-900 antialiased;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

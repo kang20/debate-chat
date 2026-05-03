@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>토론챗 — 프로토타입</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  body {
+    font-family: 'Pretendard Variable','Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', system-ui, sans-serif;
+  }
+  .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* hide horizontal scrollbar on mobile filter rail */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet"/>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script src="data.js"></script>
+<script type="text/babel" src="components/icons.jsx"></script>
+<script type="text/babel" src="components/Primitives.jsx"></script>
+<script type="text/babel" src="components/Header.jsx"></script>
+<script type="text/babel" src="components/Room.jsx"></script>
+<script type="text/babel" src="components/Chat.jsx"></script>
+<script type="text/babel" src="components/Argument.jsx"></script>
+<script type="text/babel" src="components/Pages.jsx"></script>
+<script type="text/babel" src="components/HomeV2.jsx"></script>
+<script type="text/babel" src="components/DesktopExtras.jsx"></script>
+<script type="text/babel" src="components/Mobile.jsx"></script>
+<script type="text/babel" src="components/AppShell.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// Pre-seed: make 김토론 the "me" so logged-in flows feel coherent.
+const ME = { id:'user-1', nickname:'김토론', email:'kim@example.com' };
+
+function Canvas() {
+  const [tweaks, setTweak] = useTweaks(/*EDITMODE-BEGIN*/{
+    "showTweaks": true,
+    "myStance": "PRO",
+    "showProgress": true,
+    "joinedRoom1": true
+  }/*EDITMODE-END*/);
+
+  // Mutate MOCK once based on tweak so all artboards stay consistent.
+  useEffect(() => {
+    // Ensure 'me' is in room-1 with the tweak's stance (or removed if false)
+    const ps = window.MOCK.participants['room-1'].filter(p => p.userId !== 'user-1');
+    if (tweaks.joinedRoom1) {
+      ps.push({ id:'p-me', userId:'user-1', nickname:'김토론', side: tweaks.myStance });
+    }
+    window.MOCK.participants['room-1'] = ps;
+  }, [tweaks.joinedRoom1, tweaks.myStance]);
+
+  return (
+    <>
+      <DesignCanvas title="토론챗 — 인터랙티브 프로토타입">
+        <DCSection id="desktop" title="데스크탑 웹">
+          {/* Desktop: full app at 1280x820, starting at login */}
+          <DCArtboard id="d-login" label="01. 로그인" width={1280} height={820}>
+            <DesktopAppFrame initialPage="login"/>
+          </DCArtboard>
+          <DCArtboard id="d-home" label="02. 홈 — 토론방 둘러보기" width={1280} height={1400}>
+            <DesktopAppFrame initialPage="home" initialUser={ME}/>
+          </DCArtboard>
+          <DCArtboard id="d-room" label="03. 토론방 상세 — 채팅 + 논거 트리 + 참여자" width={1280} height={900}>
+            <DesktopAppFrame initialPage="room" initialUser={ME} initialRoomId="room-1"/>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="mobile" title="모바일 (iOS)">
+          <DCArtboard id="m-login" label="01. 로그인" width={420} height={900}>
+            <MobileFrameWrap><MobileApp initialPage="login"/></MobileFrameWrap>
+          </DCArtboard>
+          <DCArtboard id="m-home" label="02. 홈 — 둘러보기" width={420} height={900}>
+            <MobileFrameWrap><MobileApp initialPage="home" initialUser={ME}/></MobileFrameWrap>
+          </DCArtboard>
+          <DCArtboard id="m-room-chat" label="03. 토론방 — 채팅" width={420} height={900}>
+            <MobileFrameWrap><MobileApp initialPage="room" initialUser={ME} initialRoomId="room-1" initialJoined={tweaks.myStance}/></MobileFrameWrap>
+          </DCArtboard>
+          <DCArtboard id="m-room-tree" label="04. 토론방 — 논거 트리" width={420} height={900}>
+            <MobileFrameWrap><MobileAppTree initialUser={ME} initialRoomId="room-1" initialJoined={tweaks.myStance}/></MobileFrameWrap>
+          </DCArtboard>
+          <DCArtboard id="m-noti" label="05. 알림" width={420} height={900}>
+            <MobileFrameWrap><MobileApp initialPage="noti" initialUser={ME}/></MobileFrameWrap>
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      {tweaks.showTweaks && (
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="내 입장 (찬성/반대/중립)">
+            <TweakRadio label="입장" value={tweaks.myStance}
+              onChange={v => setTweak('myStance', v)}
+              options={['PRO','CON','NEUTRAL']}/>
+            <p className="text-[11px] text-gray-500 mt-1">토론방-1 에서 내가 들고 있는 입장. 채팅 컴포저의 사이드 배지가 바뀝니다.</p>
+          </TweakSection>
+          <TweakSection label="토론방 참여 여부">
+            <TweakToggle label="토론방-1에 참여 중" value={tweaks.joinedRoom1}
+              onChange={v => setTweak('joinedRoom1', v)}/>
+            <p className="text-[11px] text-gray-500 mt-1">끄면 "참여하기" CTA가 나오고 입장 선택 시트를 볼 수 있습니다.</p>
+          </TweakSection>
+        </TweaksPanel>
+      )}
+    </>
+  );
+}
+
+// ===== Wrappers =====
+function DesktopAppFrame({ initialPage, initialUser, initialRoomId }) {
+  // Render desktop app inside a "browser viewport" — just bg + the app at full height
+  return (
+    <div className="h-full w-full overflow-auto bg-gray-50">
+      <DesktopApp initialPage={initialPage} initialUser={initialUser} initialRoomId={initialRoomId}/>
+    </div>
+  );
+}
+
+function MobileFrameWrap({ children }) {
+  // Center an iOS frame in the artboard. iPhoneFrame from the starter is 393x852.
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gray-100">
+      <IOSDevice width={393} height={820}>
+        {children}
+      </IOSDevice>
+    </div>
+  );
+}
+
+// Variant of MobileApp that opens directly to the argument-tree tab.
+function MobileAppTree({ initialUser, initialRoomId, initialJoined }) {
+  // Reuse MobileApp but override its initial tab. We can't pass that through props,
+  // so render MobileRoom directly — but we need participant seeding logic.
+  React.useEffect(() => {
+    if (initialJoined && initialUser && initialRoomId) {
+      const ps = window.MOCK.participants[initialRoomId] || [];
+      if (!ps.some(p => p.userId === initialUser.id)) {
+        window.MOCK.participants[initialRoomId] = [...ps, { id:`p-tree-${initialRoomId}`, userId: initialUser.id, nickname: initialUser.nickname, side: initialJoined }];
+      }
+    }
+  }, []);
+  return (
+    <div className="h-full w-full bg-gray-50 relative overflow-hidden">
+      <MobileRoomTreeShim roomId={initialRoomId} currentUser={initialUser}/>
+    </div>
+  );
+}
+
+// Thin shim that renders MobileRoom but starts on 'args' tab.
+function MobileRoomTreeShim({ roomId, currentUser }) {
+  const I = window.Icons;
+  const room = window.MOCK.rooms.find(r => r.id === roomId);
+  const participants = window.MOCK.participants[roomId] || [];
+  const me = participants.find(p => p.userId === currentUser?.id);
+  const total = room.proCount + room.conCount + (room.neutralCount || 0);
+  const proPct = total ? (room.proCount / total) * 100 : 50;
+  const conPct = total ? (room.conCount / total) * 100 : 50;
+  return (
+    <div className="flex h-full w-full flex-col bg-gray-50">
+      <MobileTopBar
+        title={room.title}
+        subtitle={`참여자 ${participants.length}명`}
+        leading={<button className="flex h-9 w-9 items-center justify-center rounded-full text-gray-700"><I.ArrowLeft size={20}/></button>}
+        trailing={<button className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500"><I.Users size={18}/></button>}/>
+      <div className="shrink-0 border-b border-gray-200 bg-white px-4 py-2.5">
+        <div className="mb-1.5 flex items-center justify-between text-[11px]">
+          <span className="font-semibold text-blue-600">찬성 {room.proCount}</span>
+          <span className="text-gray-400">중립 {room.neutralCount}</span>
+          <span className="font-semibold text-red-600">반대 {room.conCount}</span>
+        </div>
+        <div className="flex h-2 w-full overflow-hidden rounded-full bg-gray-100">
+          <div className="bg-blue-500" style={{ width: `${proPct}%` }}/>
+          <div className="bg-red-500" style={{ width: `${conPct}%` }}/>
+        </div>
+      </div>
+      <div className="shrink-0 flex items-stretch border-b border-gray-200 bg-white">
+        <button className="relative flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-gray-500">
+          <I.MessageCircle size={16}/>실시간 채팅
+        </button>
+        <button className="relative flex flex-1 items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-indigo-600">
+          <I.TreePine size={16}/>논거 트리
+          <span className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-indigo-600"/>
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto bg-gray-50 px-3 py-3">
+        <ArgumentTree args={window.MOCK.argumentsByRoom[roomId] || []}/>
+      </div>
+      <div className="shrink-0 border-t border-gray-200 bg-white px-3 py-2" style={{ paddingBottom: 22 }}>
+        <button className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-medium text-gray-700">
+          <I.Plus size={16}/>새 논거 작성
+        </button>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Canvas/>);
+</script>
+</body>
+</html>
