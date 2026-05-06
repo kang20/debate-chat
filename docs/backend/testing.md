@@ -6,7 +6,13 @@
 backend/src/test/
 ├── java/debatechat/backend/
 │   ├── BackendApplicationTests.java        # 애플리케이션 로드 검증
-│   ├── ServiceIntegrationTest.java         # 통합 테스트 기반 추상 클래스
+│   ├── base/                              # 테스트 공통 기반
+│   │   ├── ServiceIntegrationTest.java    # 통합 테스트 기반 추상 클래스
+│   │   ├── arch/
+│   │   │   └── ArchitectureTest.java      # ArchUnit 아키텍처 검증
+│   │   └── fixture/                       # 테스트 Fixture (엔티티 사전 세팅)
+│   │       ├── UserFixture.java
+│   │       └── RefreshTokenFixture.java
 │   ├── common/                             # 공통 모듈 테스트
 │   ├── domain/{도메인}/
 │   │   ├── entity/                         # Entity 단위 테스트
@@ -211,6 +217,7 @@ class XxxServiceIntegrationTest extends ServiceIntegrationTest {
 
     @Autowired private XxxUsecase xxxUsecase;  // Usecase 인터페이스로 주입
     @Autowired private XxxRepository xxxRepository;
+    @Autowired private XxxFixture xxxFixture;   // Fixture로 사전 데이터 세팅
 
     // 외부 API 의존성만 Mock
     @MockitoBean private ExternalClientFactory externalClientFactory;
@@ -222,7 +229,8 @@ class XxxServiceIntegrationTest extends ServiceIntegrationTest {
 
     @Test
     void 정상_실행_시_DB에_저장된다() {
-        // given - 외부 API 응답 Mock
+        // given - Fixture로 사전 데이터 세팅 + 외부 API 응답 Mock
+        XxxEntity existing = xxxFixture.create("param");
         given(mockClient.execute(any())).willReturn(result);
 
         // when
@@ -335,6 +343,49 @@ class GlobalExceptionHandlerTest {
     }
 }
 ```
+
+## Fixture 패턴
+
+**역할**: 통합 테스트에서 엔티티 사전 세팅(생성 + 저장 + flush)을 캡슐화한다
+
+**위치**: `base/fixture/` 패키지, `@Component`로 등록
+
+```java
+@Component
+public class XxxFixture {
+
+    @Autowired private XxxRepository xxxRepository;
+    @Autowired private EntityManager em;
+
+    public XxxEntity create(String param) {
+        XxxEntity entity = XxxEntity.create(param);
+        xxxRepository.save(entity);
+        em.flush();
+        em.clear();
+        return entity;
+    }
+}
+```
+
+**사용**:
+
+```java
+class XxxServiceIntegrationTest extends ServiceIntegrationTest {
+
+    @Autowired XxxFixture xxxFixture;
+
+    @Test
+    void 테스트() {
+        XxxEntity entity = xxxFixture.create("param");
+        // entity는 DB에 저장되고 영속성 컨텍스트가 초기화된 상태
+    }
+}
+```
+
+**규칙**:
+- Fixture 내부에서 `save` + `flush` + `clear`까지 처리한다
+- 도메인별로 Fixture 클래스를 분리한다 (`UserFixture`, `RefreshTokenFixture` 등)
+- 자주 쓰는 시나리오는 의미 있는 메서드명으로 제공한다 (예: `createExpired()`)
 
 ## 테스트 설정
 
