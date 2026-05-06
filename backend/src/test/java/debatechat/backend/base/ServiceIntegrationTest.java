@@ -1,4 +1,4 @@
-package debatechat.backend;
+package debatechat.backend.base;
 
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;

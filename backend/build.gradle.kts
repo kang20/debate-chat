@@ -44,6 +44,7 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testImplementation("com.squareup.okhttp3:mockwebserver3-junit5:5.3.2")
+	testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
 	testCompileOnly("org.projectlombok:lombok")
 	testRuntimeOnly("com.h2database:h2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
