@@ -159,5 +159,25 @@ class OAuthClientTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.OAUTH_AUTHENTICATION_FAILED);
         }
+
+        @ParameterizedTest
+        @EnumSource(OAuthProvider.class)
+        void 예상치_못한_오류_시_OAUTH_AUTHENTICATION_FAILED_예외(OAuthProvider provider) {
+            String invalidUrl = "http://localhost:1/";
+            WebClient webClient = WebClient.builder().build();
+            OAuthClient client = switch (provider) {
+                case GOOGLE -> new GoogleOAuthClient(webClient, new OAuthProperties(
+                    new OAuthProperties.Provider("id", "secret", "redirect", invalidUrl + "token", invalidUrl + "userinfo"),
+                    null));
+                case KAKAO -> new KakaoOAuthClient(webClient, new OAuthProperties(
+                    null,
+                    new OAuthProperties.Provider("id", "secret", "redirect", invalidUrl + "token", invalidUrl + "userinfo")));
+            };
+
+            assertThatThrownBy(() -> client.getUserInfo(AUTHORIZATION_CODE))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.OAUTH_AUTHENTICATION_FAILED);
+        }
     }
 }

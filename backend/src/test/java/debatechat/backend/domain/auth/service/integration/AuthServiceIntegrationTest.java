@@ -177,5 +177,18 @@ class AuthServiceIntegrationTest extends ServiceIntegrationTest {
 
             assertThat(refreshTokenRepository.findByToken(expired.getToken())).isEmpty();
         }
+
+        @Test
+        void 유효한_토큰이지만_유저가_삭제된_경우_USER_NOT_FOUND_예외() {
+            User user = userFixture.createDraft(OAuthProvider.GOOGLE, GOOGLE_OAUTH_ID);
+            RefreshToken token = refreshTokenFixture.create(user);
+            userRepository.deleteById(user.getId());
+            flushAndClearContext();
+
+            assertThatThrownBy(() -> authService.refresh(token.getToken()))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
     }
 }
