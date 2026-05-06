@@ -290,10 +290,11 @@ Authorization: Bearer {accessToken}
 ```
 1. 사용자 → [POST /api/auth/logout] (Authorization: Bearer {accessToken})
 2. 서버: AccessToken 검증 → userId 추출
-3. 서버: DB에서 userId에 해당하는 RefreshToken 삭제
-4. 서버 → 사용자: 204 No Content
-5. 프론트엔드: localStorage에서 토큰 삭제
-6. 프론트엔드: 초기 화면으로 이동
+3. 서버: userId에 해당하는 사용자 존재 여부 확인 → 존재함
+4. 서버: DB에서 userId에 해당하는 RefreshToken 삭제
+5. 서버 → 사용자: 204 No Content
+6. 프론트엔드: localStorage에서 토큰 삭제
+7. 프론트엔드: 초기 화면으로 이동
 ```
 
 ### 대안 흐름
@@ -301,10 +302,11 @@ Authorization: Bearer {accessToken}
 | ID | 조건 | 에러 코드 | 응답 | 메시지 |
 |----|------|-----------|------|--------|
 | AF-1 | AccessToken 없음 또는 유효하지 않음 | AUTH_005 | 401 Unauthorized | "인증이 필요합니다." |
+| AF-2 | userId에 해당하는 사용자가 존재하지 않음 | AUTH_004 | 401 Unauthorized | "가입되지 않은 사용자입니다. 먼저 회원가입을 해주세요." |
 
 ### 비즈니스 규칙
 
-- 서버는 AccessToken을 검증하여 userId를 추출한다
+- 서버는 AccessToken을 검증하여 userId를 추출하고, 해당 사용자가 존재하는지 확인한다
 - 로그아웃 시 DB에서 RefreshToken을 삭제하여 서버 측 무효화 처리
 - 로그아웃 후 기존 RefreshToken으로 토큰 갱신 시도 → 실패 (UC-4 AF-1)
 
@@ -356,10 +358,9 @@ Content-Type: application/json
 1. 사용자 → [POST /api/auth/refresh] { refreshToken }
 2. 서버: refreshToken DB 조회 → 존재함 + 미만료
 3. 서버: userId, role 확인
-4. 서버: 기존 RefreshToken 삭제 (Rotation)
-5. 서버: 새 AccessToken + RefreshToken 생성
+4. 서버: 기존 RefreshToken의 토큰 값과 만료일시를 갱신 (In-place Rotation)
+5. 서버: 새 AccessToken 생성
    - AccessToken: subject=userId, role, 유효기간 30분
-   - RefreshToken: 유효기간 14일, DB 저장
 6. 서버 → 사용자: 200 OK + { accessToken, refreshToken }
 ```
 
@@ -372,14 +373,14 @@ Content-Type: application/json
 
 ### 비즈니스 규칙
 
-- RefreshToken Rotation: 갱신 시 기존 토큰 폐기 + 새 토큰 발급 (토큰 탈취 감지 목적)
+- RefreshToken Rotation: 갱신 시 기존 레코드의 토큰 값과 만료일시를 새 값으로 교체 (In-place Update, 토큰 탈취 감지 목적)
 - 만료되거나 DB에 없는 RefreshToken으로 갱신 시도 → 재로그인 유도
 
 ---
 
 ## 에러 코드 정의
 
-> 상세 응답 표준은 [api-response-standard.md](./api-response-standard.md)를 참고한다.
+> 상세 응답 표준은 [api-response-standard.md](../backend/api-response-standard.md)를 참고한다.
 
 ### 에러 응답 형식
 
@@ -436,7 +437,7 @@ Content-Type: application/json
 
 **갱신 정책 (RefreshToken Rotation)**:
 1. AccessToken 만료 시 → `POST /api/auth/refresh` 호출
-2. 서버: 기존 RefreshToken 삭제 + 새 AccessToken, RefreshToken 발급
+2. 서버: 기존 RefreshToken 레코드의 토큰 값/만료일시 갱신 + 새 AccessToken 발급
 3. Rotation으로 탈취된 RefreshToken 재사용 차단
 4. RefreshToken도 만료 시 → 재로그인 필요
 
@@ -452,18 +453,29 @@ Content-Type: application/json
 
 ```
 debatechat.backend/
-├── config/         SecurityConfig, WebConfig(CORS), JwtProperties, OAuthProperties
-├── domain/user/    User(엔티티), OAuthProvider(enum), DebateGrade(enum), UserRole(enum)
-├── domain/auth/    RefreshToken(엔티티)
-├── repository/     UserRepository, RefreshTokenRepository
-├── service/        AuthService, JwtService
-├── service/oauth/  OAuthClient(인터페이스), GoogleOAuthClient, KakaoOAuthClient,
-│                   OAuthClientFactory, OAuthUserInfo(record)
-├── controller/     AuthController
-├── dto/request/    SignupRequest, LoginRequest, TokenRefreshRequest
-├── dto/response/   UserResponse, LoginResponse, TokenRefreshResponse, ErrorResponse
-├── exception/      BusinessException, GlobalExceptionHandler
-└── security/       JwtAuthenticationFilter, JwtAuthenticationToken
+├── common/
+│   ├── annotation/          @Implement (세부 구현 클래스 어노테이션)
+│   ├── dto/response/        ErrorResponse
+│   ├── exception/           ErrorCode, BusinessException, GlobalExceptionHandler
+│   └── security/            JwtAuthenticationFilter, JwtAuthenticationToken, AuthUser, @CurrentUser
+├── config/                  SecurityConfig, WebConfig(CORS), WebClientConfig
+├── presentation/auth/
+│   ├── controller/          AuthController
+│   └── dto/                 SignupRequest, LoginRequest, TokenRefreshRequest,
+│                            LoginResponse, TokenRefreshResponse, UserResponse
+├── domain/
+│   ├── user/
+│   │   ├── entity/          User, OAuthProvider(enum), DebateGrade(enum), UserRole(enum)
+│   │   └── port/outbound/   UserRepository
+│   └── auth/
+│       ├── entity/          RefreshToken, JwtProperties, OAuthUserInfo
+│       ├── port/
+│       │   ├── inbound/     AuthUsecase
+│       │   └── outbound/    RefreshTokenRepository, OAuthClient
+│       └── service/
+│           ├── AuthService (implements AuthUsecase)
+│           └── implement/   JwtHandler, RefreshTokenWriter, OAuthClientFactory
+└── infra/api/oauth/         GoogleOAuthClient, KakaoOAuthClient, OAuthProperties
 ```
 
 ### Security 설정
@@ -486,7 +498,7 @@ debatechat.backend/
 | 1 | 의존성 추가 (build.gradle.kts) |
 | 2 | 도메인 계층 — enum(OAuthProvider, DebateGrade, UserRole), User 엔티티, RefreshToken 엔티티, 각 Repository |
 | 3 | 설정 — JwtProperties, OAuthProperties, application-local.yml, test application.yml |
-| 4 | 서비스 계층 — JwtService, OAuth 클라이언트(Google/Kakao), AuthService |
+| 4 | 서비스 계층 — JwtHandler, OAuth 클라이언트(Google/Kakao), OAuthClientFactory, RefreshTokenWriter, AuthService |
 | 5 | DTO — request(Signup/Login/TokenRefresh), response(User/Login/TokenRefresh/Error) |
 | 6 | 예외 처리 — BusinessException(`throw new BusinessException(ErrorCode.XXX)`), GlobalExceptionHandler |
 | 7 | Security — JwtAuthenticationFilter, JwtAuthenticationToken, SecurityConfig 재작성, WebConfig |
@@ -507,7 +519,7 @@ debatechat.backend/
 
 | 테스트 단위 | 대상 클래스 | 테스트 범위 |
 |------------|-----------|------------|
-| JWT 토큰 생성/검증 | JwtService | AccessToken 생성, 페이로드(userId, role) 검증, 만료 토큰 거부, 위조 토큰 거부 |
+| JWT 토큰 생성/검증 | JwtHandler | AccessToken 생성, 페이로드(userId, role) 검증, 만료 토큰 거부, 위조 토큰 거부 |
 | OAuth 코드 교환 | GoogleOAuthClient, KakaoOAuthClient | 인가 코드 → 액세스 토큰 교환, 사용자 정보(oauthId) 조회, 무효 코드 시 예외 발생 |
 | 회원가입 비즈니스 로직 | AuthService#signup | UC-1 기본 흐름 + 모든 대안 흐름 (AF-1~AF-4) |
 | 로그인 비즈니스 로직 | AuthService#login | UC-2 기본 흐름 + 모든 대안 흐름 (AF-1~AF-4), RefreshToken 교체 확인 |
