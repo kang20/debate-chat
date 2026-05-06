@@ -34,23 +34,20 @@ Presentation → Domain ← Infra
                Common
 ```
 
-- **Presentation → Domain**: Controller가 Usecase 인터페이스(inbound port)를 호출한다
-- **Infra → Domain**: Infra가 Domain의 outbound Port 인터페이스를 구현한다
-- **Common**: 모든 계층에서 사용한다 (예외, 보안, DTO)
+- **Presentation → Domain**: Controller가 Usecase 인터페이스(inbound port)를 호출
+- **Infra → Domain**: Infra가 Domain의 outbound Port 인터페이스를 구현
+- **Common**: 모든 계층에서 사용 (예외, 보안, DTO)
 - **Domain은 Infra의 구체 구현을 모른다** (Port 인터페이스만 의존)
 
 ## 계층별 역할과 규칙
 
 ### Presentation 계층
 
-**역할**: HTTP 요청 수신, 입력 검증, 응답 반환
-
-**규칙**:
 - Controller는 비즈니스 로직을 포함하지 않는다
-- Domain 계층의 Usecase 인터페이스(inbound port)만 의존한다 (구체 Service 클래스 직접 의존 금지)
-- Request/Response DTO는 presentation 패키지 안에 위치한다
-
-**구현 패턴**:
+- Usecase 인터페이스(inbound port)만 의존한다 (구체 Service 클래스 직접 의존 금지)
+- Request/Response DTO는 presentation 패키지 안에 위치, Java `record`로 정의
+- 입력 검증: `@Valid` + Jakarta Validation (`@NotNull`, `@NotBlank`)
+- Entity → Response 변환: DTO 내 정적 팩토리 `XxxResponse.from(Entity)`
 
 ```java
 @RestController
@@ -61,29 +58,15 @@ public class XxxController {
 
     @PermitAll
     @PostMapping("/public-endpoint")
-    public ResponseEntity<XxxResponse> publicApi(@Valid @RequestBody XxxRequest request) {
-        XxxResponse response = xxxUsecase.execute(request.field());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+    public ResponseEntity<XxxResponse> publicApi(@Valid @RequestBody XxxRequest request) { ... }
 
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/protected-endpoint")
-    public ResponseEntity<Void> protectedApi(@CurrentUser AuthUser user) {
-        xxxUsecase.execute(user.id());
-        return ResponseEntity.noContent().build();
-    }
+    public ResponseEntity<Void> protectedApi(@CurrentUser AuthUser user) { ... }
 }
 ```
 
-- DTO는 Java `record`로 정의한다
-- 입력 검증은 `@Valid` + Jakarta Validation(`@NotNull`, `@NotBlank`)을 사용한다
-- Entity → Response DTO 변환은 DTO 내 정적 팩토리 메서드(`XxxResponse.from(Entity)`)로 처리한다
-
 ### Domain 계층
-
-**역할**: 비즈니스 로직, 도메인 규칙 구현
-
-**구성 요소**:
 
 | 요소 | 위치 | 역할 |
 |------|------|------|
@@ -95,163 +78,69 @@ public class XxxController {
 
 #### Entity
 
+- `@NoArgsConstructor(access = PROTECTED)`: JPA 전용, 외부 직접 생성 차단
+- 정적 팩토리 메서드로 도메인 규칙 캡슐화
+- `@PrePersist` / `@PreUpdate`로 생성/수정 시간 자동 관리
+
 ```java
-@Entity
-@Table(name = "table_name")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Entity @Table(name = "table_name")
+@Getter @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class XxxEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 정적 팩토리 메서드로 생성
-    public static XxxEntity create(String param) {
-        XxxEntity entity = new XxxEntity();
-        entity.field = param;
-        return entity;
-    }
+    public static XxxEntity create(String param) { ... }
 
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+    protected void onCreate() { this.createdAt = this.updatedAt = LocalDateTime.now(); }
 
     @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
 }
 ```
-
-- `@NoArgsConstructor(access = PROTECTED)`: JPA 전용, 외부에서 직접 생성을 차단한다
-- 정적 팩토리 메서드로 도메인 규칙을 캡슐화한다
-- `@PrePersist` / `@PreUpdate`로 생성/수정 시간을 자동 관리한다
 
 #### Port (인터페이스)
 
-Port는 `inbound`와 `outbound`로 분리한다.
-
-**Inbound Port (Usecase)** — Presentation이 호출하는 진입점:
-
 ```java
-// port/inbound/XxxUsecase.java
-public interface XxxUsecase {
-    XxxResponse execute(String param);
-    void delete(Long id);
-}
+// Inbound — Presentation이 호출하는 진입점. 메서드가 많으면 ReaderUsecase/WriterUsecase로 분리
+public interface XxxUsecase { XxxResponse execute(String param); }
+
+// Outbound — Repository: JpaRepository 상속, Client: Infra에서 구현
+public interface XxxRepository extends JpaRepository<XxxEntity, Long> { ... }
+public interface ExternalClient { SomeResult execute(String param); }
 ```
 
-- 메서드가 많을 경우 `XxxReaderUsecase`, `XxxWriterUsecase`로 분리할 수 있다
-- Presentation 계층은 이 인터페이스만 의존한다
-
-**Outbound Port** — Domain이 외부 시스템에 요청하는 계약:
+#### Service + Implement
 
 ```java
-// port/outbound/XxxRepository.java - Spring Data JPA가 자동 구현
-public interface XxxRepository extends JpaRepository<XxxEntity, Long> {
-    Optional<XxxEntity> findByField(String field);
-}
-
-// port/outbound/ExternalClient.java - Infra 계층에서 구현
-public interface ExternalClient {
-    SomeResult execute(String param);
-}
-```
-
-#### Service (Usecase 구현체)
-
-```java
-@Service
-@RequiredArgsConstructor
-@Transactional
+@Service @RequiredArgsConstructor @Transactional
 public class XxxService implements XxxUsecase {
     private final XxxRepository xxxRepository;
-    private final XxxWriter xxxWriter;
-
-    @Override
-    public XxxResponse execute(String param) {
-        // 유스케이스 흐름 조합
-        // 세부 로직은 Implement 클래스에 위임
-        // 예외는 BusinessException(ErrorCode)으로 던진다
-    }
+    private final XxxWriter xxxWriter;  // Implement에 위임
+    // 유스케이스 흐름 조합, 예외는 throw new BusinessException(ErrorCode.XXX)
 }
+
+// @Implement = @Component 래퍼. @Service와 구분하여 "세부 구현 클래스"임을 명시
+@Implement
+public class XxxWriter { ... }
 ```
-
-- Service는 반드시 Usecase 인터페이스를 구현한다 (`implements XxxUsecase`)
-- 유스케이스 흐름을 조합한다
-- 세부 로직은 `implement/` 패키지의 클래스에 위임한다
-- 예외는 `throw new BusinessException(ErrorCode.XXX)` 형태로 던진다
-
-#### @Implement
-
-```java
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-@Component
-public @interface Implement { ... }
-```
-
-- `@Component`의 래퍼 어노테이션이다
-- `@Service`와 구분하여 "세부 구현 클래스"임을 명시한다
 
 ### Infra 계층
 
-**역할**: 외부 시스템과의 실제 통신 구현
-
-**규칙**:
-- Domain 계층의 Port 인터페이스를 구현한다
-- Domain 계층을 의존하되, Presentation 계층은 의존하지 않는다
-
-**구현 패턴**:
+- Domain의 Port 인터페이스를 구현한다
+- Domain을 의존하되, Presentation은 의존하지 않는다
+- 외부 API 호출에는 WebClient 사용, 설정값은 `@ConfigurationProperties` record로 바인딩
 
 ```java
-@Component
-@RequiredArgsConstructor
-public class XxxExternalClient implements ExternalClient {
-    private final WebClient webClient;
-    private final XxxProperties xxxProperties;
-
-    @Override
-    public SomeResult execute(String param) {
-        // 외부 API 호출 구현
-    }
-}
+@Component @RequiredArgsConstructor
+public class XxxExternalClient implements ExternalClient { ... }
 ```
-
-- Domain의 Port 인터페이스를 구현한다
-- 외부 API 호출에는 WebClient를 사용한다
-- 설정값은 `@ConfigurationProperties` record로 YAML에서 바인딩한다
 
 ### Common 계층
 
-**역할**: 계층을 관통하는 공통 기능 제공
-
-#### 예외 처리 구조
-
-```
-ErrorCode (enum)           → 에러 코드/메시지/HTTP 상태 정의
-BusinessException          → 비즈니스 예외 (ErrorCode 포함)
-GlobalExceptionHandler     → 전역 예외 → JSON 응답 변환
-ErrorResponse (record)     → 클라이언트 응답 형식 {"code", "message"}
-```
-
-`GlobalExceptionHandler`가 처리하는 예외:
-
-| 예외 | HTTP 상태 | 설명 |
-|------|-----------|------|
-| `BusinessException` | ErrorCode에 정의된 상태 | 비즈니스 로직 예외 |
-| `MethodArgumentNotValidException` | 400 | `@Valid` 검증 실패 |
-| `HttpMessageNotReadableException` | 400 | JSON 파싱 실패 |
-| `AccessDeniedException` (미인증) | 401 | 인증 없이 보호된 API 접근 |
-| `AccessDeniedException` (권한 부족) | 403 | 인증됐지만 권한 없음 |
-| `Exception` | 500 | 예상치 못한 에러 |
-
-#### 보안 구조
-
-- 인증 방식: JWT 토큰 기반
-- 보안 제어: 메서드 레벨 어노테이션 (`@PermitAll`, `@PreAuthorize`)
-- HTTP 레벨에서는 `anyRequest().permitAll()`로 모든 요청을 통과시키고, 각 Controller 메서드의 어노테이션으로 인증/인가를 제어한다
+- 예외 처리 구조: `api-response-standard.md` 참조
+- 인증: JWT 토큰 기반, 메서드 레벨 어노테이션으로 제어
+- HTTP 레벨은 `anyRequest().permitAll()`, 각 메서드의 어노테이션으로 인증/인가 제어
 
 | 어노테이션 | 용도 |
 |-----------|------|
@@ -272,13 +161,8 @@ ErrorResponse (record)     → 클라이언트 응답 형식 {"code", "message"}
 
 | 항목 | 규칙 |
 |------|------|
-| 의존성 주입 | `@RequiredArgsConstructor` + `final` 필드 (생성자 주입) |
-| DTO | Java `record` 사용 |
+| 의존성 주입 | `@RequiredArgsConstructor` + `final` 필드 |
+| DTO | Java `record` |
 | 엔티티 생성 | 정적 팩토리 메서드 |
 | 예외 처리 | `throw new BusinessException(ErrorCode.XXX)` |
-| API 보안 | `@PermitAll` (공개), `@PreAuthorize` (인증/권한 필요) |
 | 설정 바인딩 | `@ConfigurationProperties` + `record` |
-| Service 클래스 | `@Service` + `implements XxxUsecase` |
-| Usecase 인터페이스 | `port/inbound/`에 위치, Controller가 의존하는 대상 |
-| Port 분리 | `port/inbound/` (Usecase), `port/outbound/` (Repository, Client) |
-| 세부 구현 클래스 | `@Implement` 어노테이션 |
