@@ -1,8 +1,6 @@
 package debatechat.backend.domain.auth.service.implement;
 
 import debatechat.backend.common.annotation.Implement;
-import debatechat.backend.common.exception.BusinessException;
-import debatechat.backend.common.exception.ErrorCode;
 import debatechat.backend.domain.auth.entity.RefreshToken;
 import debatechat.backend.domain.auth.port.outbound.RefreshTokenRepository;
 import debatechat.backend.domain.user.entity.User;
@@ -31,20 +29,26 @@ public class RefreshTokenWriter {
     }
 
     public LoginResponse rotate(User user) {
-        RefreshToken refreshToken = refreshTokenRepository.findByUserId(user.getId())
-            .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_TOKEN));
+        return refreshTokenRepository.findByUserId(user.getId())
+            .map(refreshToken -> {
+                var accessToken = jwtHandler.createAccessToken(user.getId(), user.getRole());
+                var refreshTokenValue = jwtHandler.createRefreshToken();
 
-        String accessToken = jwtHandler.createAccessToken(user.getId(), user.getRole());
-        String refreshTokenValue = jwtHandler.createRefreshToken();
-        refreshToken.rotate(refreshTokenValue, calcExpiresAt());
+                refreshToken.rotate(refreshTokenValue, calcExpiresAt());
+                refreshTokenRepository.save(refreshToken);
 
-        return new LoginResponse(accessToken, refreshTokenValue, UserResponse.from(user));
+                return new LoginResponse(accessToken, refreshTokenValue, UserResponse.from(user));
+            })
+            .orElseGet(() -> create(user));
     }
 
     public TokenRefreshResponse refresh(RefreshToken refreshToken, User user) {
         String newAccessToken = jwtHandler.createAccessToken(user.getId(), user.getRole());
         String newRefreshTokenValue = jwtHandler.createRefreshToken();
+
         refreshToken.rotate(newRefreshTokenValue, calcExpiresAt());
+
+        refreshTokenRepository.save(refreshToken);
 
         return new TokenRefreshResponse(newAccessToken, newRefreshTokenValue);
     }

@@ -55,6 +55,9 @@ public class AuthService implements AuthUsecase {
 
     @Override
     public void logout(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
         refreshTokenWriter.deleteByUserId(userId);
     }
 
