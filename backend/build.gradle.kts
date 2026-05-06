@@ -20,15 +20,30 @@ repositories {
 }
 
 dependencies {
+	// Spring Boot Starters
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+
+	// JWT
+	implementation("io.jsonwebtoken:jjwt-api:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
+
+	// Lombok
 	compileOnly("org.projectlombok:lombok")
+	annotationProcessor("org.projectlombok:lombok")
+
+	// Runtime
 	runtimeOnly("com.mysql:mysql-connector-j")
 	runtimeOnly("org.springframework.boot:spring-boot-docker-compose")
-	annotationProcessor("org.projectlombok:lombok")
+
+	// Test
 	testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+	testImplementation("com.squareup.okhttp3:mockwebserver3-junit5:5.3.2")
 	testCompileOnly("org.projectlombok:lombok")
 	testRuntimeOnly("com.h2database:h2")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -37,6 +52,9 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	testLogging {
+		showStandardStreams = true
+	}
 	finalizedBy(tasks.jacocoTestReport)
 }
 
