@@ -32,6 +32,9 @@ allowed-tools:
 9. 사용자에게 title과 body를 보여주고 확인을 받는다
 10. `gh pr create`로 PR을 생성한다
 11. 생성된 PR URL을 출력한다
+12. **태스크 동기화**: PR 생성 성공 후 `project-manager` skill을 호출하여 my-TODO 태스크를 최신화한다
+    - PR 번호·제목·연결된 이슈 번호를 컨텍스트로 전달
+    - project-manager가 자동 동기화 절차를 수행하여 진행중 태스크의 진행률을 갱신하도록 한다
 
 ## PR 제목 규칙
 

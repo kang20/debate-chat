@@ -14,9 +14,31 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
-    show-sql: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
 
   # H2 Console (테스트에서는 비활성화)
   h2:
     console:
       enabled: false
+
+jwt:
+  secret: test-secret-key-for-unit-tests-minimum-32-bytes-long!!
+  access-token-expiration: 1800000
+  refresh-token-expiration: 1209600000
+
+oauth:
+  google:
+    client-id: test-google-client-id
+    client-secret: test-google-client-secret
+    redirect-uri: http://localhost:5173/auth/google/callback
+    token-uri: https://oauth2.googleapis.com/token
+    user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+  kakao:
+    client-id: test-kakao-client-id
+    client-secret: test-kakao-client-secret
+    redirect-uri: http://localhost:5173/auth/kakao/callback
+    token-uri: https://kauth.kakao.com/oauth/token
+    user-info-uri: https://kapi.kakao.com/v2/user/me
