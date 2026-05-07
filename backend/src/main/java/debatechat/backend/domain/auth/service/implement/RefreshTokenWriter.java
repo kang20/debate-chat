@@ -6,7 +6,7 @@ import debatechat.backend.domain.auth.port.outbound.RefreshTokenRepository;
 import debatechat.backend.domain.user.entity.User;
 import debatechat.backend.presentation.auth.dto.LoginResponse;
 import debatechat.backend.presentation.auth.dto.TokenRefreshResponse;
-import debatechat.backend.presentation.auth.dto.UserResponse;
+import debatechat.backend.presentation.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;

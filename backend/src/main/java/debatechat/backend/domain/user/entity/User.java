@@ -73,4 +73,13 @@ public class User {
         user.debateGrade = DebateGrade.BRONZE;
         return user;
     }
+
+    public void activateWithNickname(String nickname) {
+        this.nickname = requireNonNull(nickname);
+        this.role = UserRole.USER;
+    }
+
+    public void updateNickname(String nickname) {
+        this.nickname = requireNonNull(nickname);
+    }
 }

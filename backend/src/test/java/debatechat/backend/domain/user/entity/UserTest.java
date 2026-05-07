@@ -3,6 +3,7 @@ package debatechat.backend.domain.user.entity;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class UserTest {
     @Test
@@ -51,5 +52,43 @@ class UserTest {
 
         assertThat(user.getCreatedAt()).isEqualTo(originalCreatedAt);
         assertThat(user.getUpdatedAt()).isAfterOrEqualTo(originalCreatedAt);
+    }
+
+    @Test
+    void activateWithNickname_호출_시_닉네임이_설정되고_role이_USER로_전환된다() {
+        User user = User.createDraft(OAuthProvider.GOOGLE, "oauth-123");
+
+        user.activateWithNickname("토론왕");
+
+        assertThat(user.getNickname()).isEqualTo("토론왕");
+        assertThat(user.getRole()).isEqualTo(UserRole.USER);
+    }
+
+    @Test
+    void activateWithNickname_null_시_NullPointerException() {
+        User user = User.createDraft(OAuthProvider.GOOGLE, "oauth-123");
+
+        assertThatThrownBy(() -> user.activateWithNickname(null))
+            .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void updateNickname_호출_시_닉네임만_변경되고_role은_유지된다() {
+        User user = User.createDraft(OAuthProvider.GOOGLE, "oauth-123");
+        user.activateWithNickname("기존닉네임");
+
+        user.updateNickname("새닉네임");
+
+        assertThat(user.getNickname()).isEqualTo("새닉네임");
+        assertThat(user.getRole()).isEqualTo(UserRole.USER);
+    }
+
+    @Test
+    void updateNickname_null_시_NullPointerException() {
+        User user = User.createDraft(OAuthProvider.GOOGLE, "oauth-123");
+        user.activateWithNickname("기존닉네임");
+
+        assertThatThrownBy(() -> user.updateNickname(null))
+            .isInstanceOf(NullPointerException.class);
     }
 }
