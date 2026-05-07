@@ -70,6 +70,14 @@ class UserServiceIntegrationTest extends ServiceIntegrationTest {
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.DUPLICATE_NICKNAME);
         }
+
+        @Test
+        void 존재하지_않는_userId_시_USER_NOT_FOUND_예외() {
+            assertThatThrownBy(() -> userUsecase.setNickname(999L, NICKNAME))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
+        }
     }
 
     @Nested
@@ -93,6 +101,14 @@ class UserServiceIntegrationTest extends ServiceIntegrationTest {
 
             assertThat(response.role()).isEqualTo(UserRole.DRAFT.name());
             assertThat(response.nickname()).isNull();
+        }
+
+        @Test
+        void 존재하지_않는_userId_시_USER_NOT_FOUND_예외() {
+            assertThatThrownBy(() -> userUsecase.getMyProfile(999L))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
         }
     }
 
@@ -141,6 +157,14 @@ class UserServiceIntegrationTest extends ServiceIntegrationTest {
                 .isInstanceOf(BusinessException.class)
                 .extracting(e -> ((BusinessException) e).getErrorCode())
                 .isEqualTo(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        @Test
+        void 존재하지_않는_userId_시_USER_NOT_FOUND_예외() {
+            assertThatThrownBy(() -> userUsecase.updateNickname(999L, "새닉네임"))
+                .isInstanceOf(BusinessException.class)
+                .extracting(e -> ((BusinessException) e).getErrorCode())
+                .isEqualTo(ErrorCode.USER_NOT_FOUND);
         }
     }
 
