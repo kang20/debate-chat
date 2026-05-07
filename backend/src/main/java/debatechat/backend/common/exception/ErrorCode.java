@@ -19,7 +19,13 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH_004", "가입되지 않은 사용자입니다. 먼저 회원가입을 해주세요."),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH_005", "인증이 필요합니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_006", "유효하지 않은 토큰입니다. 다시 로그인해주세요."),
-    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_007", "접근 권한이 없습니다.");
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "AUTH_007", "접근 권한이 없습니다."),
+
+    // USER
+    NICKNAME_ALREADY_SET(HttpStatus.FORBIDDEN, "USER_001", "이미 닉네임이 설정된 사용자입니다."),
+    NICKNAME_NOT_SET(HttpStatus.FORBIDDEN, "USER_002", "닉네임을 먼저 설정해주세요."),
+    SAME_NICKNAME(HttpStatus.CONFLICT, "USER_003", "현재 사용 중인 닉네임과 동일합니다."),
+    USER_NOT_ACCESSIBLE(HttpStatus.NOT_FOUND, "USER_004", "존재하지 않는 사용자입니다.");
 
     private final HttpStatus status;
     private final String code;

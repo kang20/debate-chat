@@ -20,4 +20,13 @@ public class UserFixture {
         em.clear();
         return user;
     }
+
+    public User createUser(OAuthProvider provider, String oauthId, String nickname) {
+        User user = User.createDraft(provider, oauthId);
+        user.activateWithNickname(nickname);
+        userRepository.save(user);
+        em.flush();
+        em.clear();
+        return user;
+    }
 }

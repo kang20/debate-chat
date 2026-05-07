@@ -1,4 +1,4 @@
-package debatechat.backend.presentation.auth.dto;
+package debatechat.backend.presentation.user.dto;
 
 import debatechat.backend.domain.user.entity.User;
 
