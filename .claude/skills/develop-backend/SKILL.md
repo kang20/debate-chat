@@ -9,6 +9,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash(cd backend && ./gradlew *)
+  - Bash(git *)
   - Bash(mkdir *)
   - Bash(ls *)
   - Task
@@ -44,6 +45,35 @@ allowed-tools:
 | 요구사항 | `docs/requirements/{지정 파일}` |
 
 ## 실행 절차
+
+### 0단계: 브랜치 확인 및 전환
+
+개발을 시작하기 전에 현재 브랜치가 해당 유스케이스의 이슈 번호와 일치하는지 확인한다.
+
+```bash
+git branch --show-current
+```
+
+**이슈 번호 파악 순서:**
+1. 요구사항 파일명 또는 `docs/requirements/{파일}` 상단의 GitHub 이슈 번호로 확인
+2. `gh issue list --repo kang20/debate-chat`으로 매칭 이슈 탐색
+3. 위로 확인이 안 되면 AskUserQuestion으로 사용자에게 이슈 번호 확인
+
+**브랜치 판단 기준:**
+
+| 상황 | 처리 |
+|------|------|
+| 현재 브랜치가 `feat/{이슈번호}-*` 형식이고 번호 일치 | 그대로 진행 |
+| 현재 브랜치가 다른 이슈 번호 또는 main/develop | 새 브랜치로 전환 |
+
+새 브랜치가 필요한 경우 사용자에게 확인 후 전환한다:
+
+```bash
+git fetch origin
+git checkout -b feat/{이슈번호}-{도메인 키워드} origin/main
+```
+
+> 브랜치 전환은 미커밋 변경사항이 있으면 반드시 사용자에게 먼저 알린다.
 
 ### 1단계: 문서 읽기 및 분석
 
